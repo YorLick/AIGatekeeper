@@ -595,6 +595,35 @@ class LegacyShield:
             alternative="Usar tipos específicos o unknown",
             language="typescript",
         ),
+        # ========== PROMPT INJECTION ==========
+        ZombiePattern(
+            pattern=r"ignore\s+(all\s+)?(previous\s+)?(instructions|rules|commands|prompts)",
+            severity=Severity.MEDIUM,
+            description="Prompt injection: intento de ignorar instrucciones del sistema",
+            alternative="Sanitizar input para evitar override de instrucciones",
+            language="prompt",
+        ),
+        ZombiePattern(
+            pattern=r"forget\s+(your\s+|all\s+)?(.{0,40})?(rules|instructions|guidelines|prompts|constraints)",
+            severity=Severity.MEDIUM,
+            description="Prompt injection: intento de borrar reglas del sistema",
+            alternative="No permitir que input externo descarte instrucciones del sistema",
+            language="prompt",
+        ),
+        ZombiePattern(
+            pattern=r"\bDAN\b|do\s+anything\s+now|jail\s*broken",
+            severity=Severity.HIGH,
+            description="Prompt injection: posible jailbreak (DAN)",
+            alternative="Bloquear patrones de jailbreak conocidos en input",
+            language="prompt",
+        ),
+        ZombiePattern(
+            pattern=r"(this\s+is|here\s+are)\s+(your\s+)?(new\s+)?system\s+prompt",
+            severity=Severity.HIGH,
+            description="Prompt injection: intento de redefinir system prompt",
+            alternative="El system prompt no debe ser modificable desde input externo",
+            language="prompt",
+        ),
     ]
 
     def __init__(self, languages: Optional[List[str]] = None, project_path: str = None):
