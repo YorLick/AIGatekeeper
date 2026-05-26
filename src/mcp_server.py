@@ -31,6 +31,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.sanitizer import MetadataSanitizer
 from src.ast_parser import ASTExtractor
 from src.detector import LegacyShield, scan_directory as scan_dir_fn
+from src.detector.injection_detector import PromptInjectDetector
 
 
 # =============================================================================
@@ -363,6 +364,32 @@ def clean_code(code: str) -> str:
     sanitizer = MetadataSanitizer()
     result = sanitizer.sanitize(code)
     return result.cleaned_code
+
+
+@mcp.tool()
+@mcp_error_boundary
+@timeout_handler(30)
+def scan_prompt(
+    text: str,
+    source: str = "unknown",
+) -> str:
+    """Analyze text for prompt injection attacks: direct instruction override, jailbreaks, role-play hijacking, and indirect injection via embedded instructions.
+
+    Use this to check user input, file contents, or external data before passing them to an AI agent.
+
+    Args:
+        text: The text or prompt to analyze for injection patterns.
+        source: Optional source label (e.g. "user", "file", "web", "unknown").
+
+    Returns:
+        JSON string with status, findings, and severity summary.
+    """
+    detector = PromptInjectDetector()
+    result = detector.scan_text(text)
+
+    result["source"] = source
+
+    return json.dumps(result, ensure_ascii=False, indent=2)
 
 
 # =============================================================================
