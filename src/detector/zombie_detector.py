@@ -895,13 +895,24 @@ def scan_directory(
     extensions = extensions or [".py", ".js", ".ts", ".jsx", ".tsx"]
     results = {}
 
+    # Directorios a excluir para evitar escaneos lentos innecesarios
+    SKIP_DIRS = {
+        ".venv", "venv", ".git", "__pycache__", "node_modules",
+        ".cache", ".mypy_cache", ".pytest_cache", ".eggs",
+        "dist", "build", ".tox", ".nox", ".ruff_cache",
+        "target", ".gradle", ".idea", ".vscode",
+    }
+
     # Usar proyecto proporcionado o auto-detectar
     if project_path is None:
         project_path = get_project_root()
 
     shield = LegacyShield(project_path=project_path)
 
-    for root, _, files in os.walk(directory):
+    for root, dirs, files in os.walk(directory):
+        # Filtrar directorios a excluir IN-PLACE (evita que os.walk entre en ellos)
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+
         for file in files:
             if any(file.endswith(ext) for ext in extensions):
                 file_path = os.path.join(root, file)

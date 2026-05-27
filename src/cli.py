@@ -153,10 +153,53 @@ def prune():
 @click.option("--output", "-o", type=click.Path(), help="Archivo de salida")
 def extract(file_path: str, task: str, functions: tuple, output: str):
     """Extrae contexto mínimo relevante para la tarea."""
+    import os
+    import os.path as osp
 
     extractor = ASTExtractor()
     func_list = list(functions) if functions else None
 
+    if os.path.isdir(file_path):
+        click.echo(f"📁 Extrayendo contexto del directorio: {file_path}/\n")
+        all_files = []
+        for root, dirs, files in os.walk(file_path):
+            for f in files:
+                if f.endswith(".py"):
+                    all_files.append(osp.join(root, f))
+        if not all_files:
+            click.echo("  ⚠️  No se encontraron archivos .py")
+            return
+
+        out_dir = output
+        if out_dir and not os.path.exists(out_dir):
+            os.makedirs(out_dir, exist_ok=True)
+
+        processed = 0
+        errors = 0
+        for fpath in all_files:
+            try:
+                pruned = extractor.prune(fpath, task, func_list)
+                s = extractor.get_stats(pruned)
+                rel = osp.relpath(fpath)
+                click.echo(f"  ✓ {rel} → {s['reduction_percent']}% ({s['original_lines']}→{s['pruned_lines']} líneas)")
+
+                if out_dir:
+                    rel_out = osp.splitext(rel)[0] + "_pruned.py"
+                    out_path = osp.join(out_dir, rel_out)
+                    os.makedirs(osp.dirname(out_path), exist_ok=True)
+                    out_code = _build_pruned_output(pruned)
+                    with open(out_path, "w", encoding="utf-8") as f:
+                        f.write(out_code)
+                    click.echo(f"     💾 Guardado en: {out_path}")
+                processed += 1
+            except Exception as e:
+                errors += 1
+                click.echo(f"  ✗ {osp.relpath(fpath)} → error: {e}")
+
+        click.echo(f"\n📊 Resumen: {processed} archivos procesados" + (f", {errors} errores" if errors else ""))
+        return
+
+    # Mode: single file
     pruned = extractor.prune(file_path, task, func_list)
     stats = extractor.get_stats(pruned)
 
@@ -195,17 +238,66 @@ def extract(file_path: str, task: str, functions: tuple, output: str):
 @click.argument("file_path", type=click.Path(exists=True))
 def stats(file_path: str):
     """Muestra estadísticas de reducción potencial."""
+    import os
+    import os.path as osp
 
-    extractor = ASTExtractor()
-    pruned = extractor.prune(file_path, "analyze")
-    stats = extractor.get_stats(pruned)
+    if os.path.isdir(file_path):
+        # Mode: directory -> aggregate stats for all Python files
+        click.echo(f"📁 Escaneando directorio: {file_path}/\n")
+        all_files = []
+        for root, dirs, files in os.walk(file_path):
+            for f in files:
+                if f.endswith(".py"):
+                    all_files.append(osp.join(root, f))
 
-    click.echo(f"📈 Estadísticas para: {file_path}")
-    click.echo(f"\n  Líneas originales:  {stats['original_lines']}")
-    click.echo(f"  Líneas podadas:     {stats['pruned_lines']}")
-    click.echo(f"  Reducción:          {stats['reduction_percent']}%")
-    click.echo(f"  Funciones válidas:  {stats['functions_kept']}")
-    click.echo(f"  Funciones omitidas: {stats['functions_omitted']}")
+        if not all_files:
+            click.echo("  ⚠️  No se encontraron archivos .py")
+            return
+
+        extractor = ASTExtractor()
+        total_orig = 0
+        total_pruned = 0
+        total_kept = 0
+        total_omitted = 0
+        processed = 0
+        errors = 0
+
+        for fpath in all_files:
+            try:
+                pruned = extractor.prune(fpath, "analyze")
+                s = extractor.get_stats(pruned)
+                total_orig += s["original_lines"]
+                total_pruned += s["pruned_lines"]
+                total_kept += s["functions_kept"]
+                total_omitted += s["functions_omitted"]
+                processed += 1
+                click.echo(f"  {'✓' if s['reduction_percent'] > 0 else ' '} {osp.relpath(fpath)} → {s['reduction_percent']}%")
+            except Exception as e:
+                errors += 1
+                click.echo(f"  ✗ {osp.relpath(fpath)} → error: {e}")
+
+        pct = round((1 - total_pruned / total_orig) * 100, 1) if total_orig > 0 else 0
+        click.echo("\n📊 Resumen agregado:")
+        click.echo(f"  Archivos procesados: {processed}")
+        click.echo(f"  Líneas originales:   {total_orig}")
+        click.echo(f"  Líneas podadas:      {total_pruned}")
+        click.echo(f"  Reducción total:     {pct}%")
+        click.echo(f"  Funciones válidas:   {total_kept}")
+        click.echo(f"  Funciones omitidas:  {total_omitted}")
+        if errors:
+            click.echo(f"  ⚠️  Errores:          {errors}")
+    else:
+        # Mode: single file (original behavior)
+        extractor = ASTExtractor()
+        pruned = extractor.prune(file_path, "analyze")
+        s = extractor.get_stats(pruned)
+
+        click.echo(f"📈 Estadísticas para: {file_path}")
+        click.echo(f"\n  Líneas originales:  {s['original_lines']}")
+        click.echo(f"  Líneas podadas:     {s['pruned_lines']}")
+        click.echo(f"  Reducción:          {s['reduction_percent']}%")
+        click.echo(f"  Funciones válidas:  {s['functions_kept']}")
+        click.echo(f"  Funciones omitidas: {s['functions_omitted']}")
 
 
 def _build_pruned_output(pruned) -> str:
