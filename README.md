@@ -4,6 +4,8 @@
 [![Coverage](https://codecov.io/gh/Leoshi123/AIGatekeeper/branch/main/graph/badge.svg)](https://codecov.io/gh/Leoshi123/AIGatekeeper)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/)
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-purple.svg)](https://isocpp.org/)
+[![re2](https://img.shields.io/badge/regex-re2-orange.svg)](https://github.com/google/re2)
 
 > 🌐 Available in: English, Español
 
@@ -42,19 +44,22 @@ Alias corto: `ag` en vez de `aigatekeeper`
 
 ---
 
-## 🚀 v1.1.0 - CLI Productivo
+## 🚀 v2.0.0 — C++ Native Core Engine
 
-> 📢 **Próximamente**: Migración a **C/C++** para máxima performance. Ver [Roadmap](#-roadmap).
+> ⚡ **¡El core ahora corre en C++17 nativo!** Motor regex **re2** (Google) — seguro contra ReDoS, hasta 10x más rápido.
 
 ### Novedades en esta versión
 
 | Feature | Descripción |
 |---------|-------------|
-| 🆕 `aigatekeeper init` | Registra proyecto, detecta stack, crea `.aigatekeeper/` |
-| 🆕 `aigatekeeper prompt` | Templates predefinidos (security-audit, tdd-mode, code-review) |
-| 🆕 `aigatekeeper scan-prompt` | Detecta 4 vectores de prompt injection |
-| 🆕 `aigatekeeper push` | `git add + scan + sanitize + commit + push` en un comando |
-| 🆕 Entry points | `aigatekeeper` y `ag` disponibles directamente en PATH |
+| ⚡ **Motor C++ nativo** | MetadataSanitizer, LegacyShield y PromptInjectDetector corren en C++17 con pybind11 |
+| 🔒 **re2 seguro** | Google Regex engine — protegido contra ReDoS por diseño |
+| 🔄 **Fallback automático** | Si el módulo nativo no está disponible, usa Python puro sin cambios |
+| 🏗️ **scikit-build-core** | Compilación C++ automática con `pip install` |
+| 🧹 **Magic comments** | `# ag: ignore` / `// ag: ignore` para excluir líneas del escaneo |
+| 🔍 **Filtros por lenguaje** | `LegacyShield(languages=['go'])` para escaneos específicos |
+| 🆕 **has_high_severity()** | Nueva API estática en PromptInjectDetector |
+| 🆕 **get_summary()** | Resumen estructurado en ambos detectores |
 
 ### Comandos del CLI
 
@@ -81,10 +86,11 @@ Commands:
 |------|------------|
 | 🧹 **Metadata Cleaner** | Elimina comentarios de IA, rutas absolutas, firmas de modelos |
 | 🔑 **Secret Detector** | Bloquea API keys, tokens, credenciales |
-| ⚠️ **Zombie Code Detector** | Detecta +60 patrones vulnerables en 9 lenguajes |
+| ⚠️ **Zombie Code Detector** | Detecta 55+ patrones vulnerables en 9 lenguajes |
 | 🎭 **Prompt Injection Detector** | 4 vectores: direct, indirect, jailbreak, role-play |
 | 🪝 **Git Hooks** | Escaneo automático en cada commit/push |
 | 🤖 **MCP Server** | Integración nativa con Claude Code, Cursor, OpenCode, Windsurf |
+| ⚡ **C++ Native Engine** | Motor regex re2, fallback automático a Python puro |
 
 ### Lenguajes Soportados
 
@@ -103,6 +109,16 @@ Commands:
 ---
 
 ## 📦 Instalación
+
+### Requisitos del sistema
+
+Para el módulo nativo C++ (se compila automáticamente):
+
+- **CMake ≥ 3.20**
+- **pybind11 ≥ 3.0**
+- **re2** (Google Regex) — `libre2-dev` en Debian/Ubuntu, `re2` en Arch/CachyOS
+- **Compilador C++17** (GCC ≥ 8, Clang ≥ 7, MSVC 2019+)
+- **Python ≥ 3.10** con `python3-dev` (headers de desarrollo)
 
 ### Método 1: curl | bash (Recomendado)
 
@@ -124,10 +140,16 @@ source .venv/bin/activate  # Linux/macOS
 pip install -e .
 ```
 
-### Método 3: PowerShell (Windows)
+> ⚡ `pip install` compila automáticamente el módulo C++ vía scikit-build-core + CMake.
 
-```powershell
-.\install.ps1
+### Método 3: Sin módulo nativo
+
+Si no tienes CMake o pybind11, AIGatekeeper funciona igual con **fallback automático a Python puro** — sin cambios en el CLI ni en la API.
+
+```bash
+pip install -e . --no-build-isolation
+# o
+uv pip install -e .
 ```
 
 ### Verificar instalación
@@ -141,7 +163,7 @@ ag --help
 
 ## 🎯 Prompt Injection Detection
 
-Nuevo en v1.1.0: protección contra el vector #1 contra sistemas aumentados con IA.
+Protección contra el vector #1 contra sistemas aumentados con IA.
 
 ```bash
 # Scan rápido
@@ -206,7 +228,7 @@ Exponé AIGatekeeper a cualquier agente compatible con MCP.
 | `sanitize_code` | Limpia metadata de IA, secretos, rutas |
 | `scan_code` | Detecta patrones vulnerables |
 | `scan_directory` | Escaneo recursivo de directorio |
-| `scan_prompt` | **NUEVO** - Detecta prompt injection |
+| `scan_prompt` | Detecta prompt injection |
 | `prune_context` | Extrae contexto mínimo via AST |
 | `clean_code` | Limpieza rápida de metadata |
 
@@ -254,13 +276,23 @@ Features:
 
 ```
 AIGatekeeper/
-├── pyproject.toml          # Entry points: aigatekeeper, ag
+├── pyproject.toml          # Entry points + scikit-build-core build
+├── core/                   # C++17 Native Core Engine
+│   ├── CMakeLists.txt      # Build: agcore lib + pyagcore module + tests
+│   ├── include/            # Headers públicos (sanitizer.h, scanner.h, injection.h)
+│   ├── src/                # Implementaciones C++ con re2 + PIMPL
+│   │   ├── sanitizer.cpp   # MetadataSanitizer (12 patrones)
+│   │   ├── scanner.cpp     # LegacyShield (55+ patrones, 9 lenguajes)
+│   │   └── injection.cpp   # PromptInjectDetector (14 patrones, 4 categorías)
+│   ├── bindings/pyag.cpp   # pybind11 module → pyagcore
+│   ├── tests/test_core.cpp # 38 tests C++
+│   └── build.sh            # Build script: release|debug|test|clean|all
 ├── install.sh              # curl | bash installer
 ├── install.ps1             # Windows installer
 ├── server.py               # Web Dashboard
 ├── src/
 │   ├── cli.py              # CLI principal
-│   ├── cli_extensions.py   # Comandos nuevos (v1.1.0)
+│   ├── cli_extensions.py   # Comandos extendidos
 │   ├── cli_prompts/        # Templates de prompts
 │   │   ├── security-audit.md
 │   │   ├── code-review.md
@@ -268,14 +300,20 @@ AIGatekeeper/
 │   │   └── refactor-mode.md
 │   ├── mcp_server.py       # MCP Server
 │   ├── detector/
-│   │   ├── __init__.py
-│   │   └── injection_detector.py   # Prompt injection (v1.1.0)
+│   │   ├── __init__.py     # Wrapper con fallback: C++ nativo → Python puro
+│   │   ├── zombie_detector.py     # LegacyShield (fallback Python)
+│   │   ├── injection_detector.py  # PromptInjectDetector (fallback Python)
+│   │   └── ast_detector.py        # AST-based detector (tree-sitter)
 │   ├── sanitizer/
-│   ├── ast_parser/
-│   └── wrapper/
+│   │   ├── __init__.py     # Wrapper con fallback: C++ nativo → Python puro
+│   │   └── metadata_cleaner.py    # Sanitizer (fallback Python)
+│   ├── ast_parser/         # Context pruner (AST-based code pruning)
+│   └── wrapper/            # AI Agent Wrapper
 ├── tests/
-│   ├── test_injection_detector.py  # 15 tests (v1.1.0)
-│   └── ...
+│   ├── test_detector.py           # 60+ tests LegacyShield
+│   ├── test_injection_detector.py # 15 tests PromptInjectDetector
+│   ├── test_sanitizer.py          # 9 tests MetadataSanitizer
+│   └── ...                        # wrapper, ast, mcp, adversarial tests
 └── .aigatekeeper/          # Creado por `aigatekeeper init`
     └── config.json
 ```
@@ -310,19 +348,7 @@ Crea `.aigatekeeper/config.json`:
 
 ## 🗺️ Roadmap
 
-> 📢 **Anuncio**: Próximamente migración del **core a C/C++**
-
-### Por qué C/C++?
-
-| Factor | Python Actual | C/C++ Futuro |
-|--------|:-------------:|:------------:|
-| Velocidad escaneo | Referencia | **~50-100x más rápido** |
-| Memoria | Alto | **Muy bajo** |
-| Embebible | No | **Sí** (estático) |
-| Startup time | ~100-300ms | **~1ms** |
-| Distribución | Python requerido | **Binario standalone** |
-
-### Versiones Planificadas
+### C++ Native Core — ¡YA DISPONIBLE!
 
 | Versión | Estado | Feature |
 |---------|:------:|---------|
@@ -331,46 +357,39 @@ Crea `.aigatekeeper/config.json`:
 | **v1.0.2** | ✅ | MCP Resilience + Indestructible Server |
 | **v1.0.3** | ✅ | Web Dashboard |
 | **v1.0.5** | ✅ | Adversarial Testing |
-| **v1.1.0** | 🚀 | **CLI Productivo + Prompt Injection** (actual) |
-| **v2.0.0** | 📅 | **Migración Core a C/C++** |
+| **v1.1.0** | ✅ | **CLI Productivo + Prompt Injection** |
+| **v2.0.0** | 🚀 | **Migración Core a C/C++** (actual) |
 | **v2.1.0** | 📅 | Bindings: Python, Node.js, Go |
 | **v3.0.0** | 📅 | Engine de ML para detección avanzada |
 
-### v2.0.0 - Migración C/C++ (Próximamente)
-
-Arquitectura planeada:
+### Arquitectura v2.0.0
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                  CLI Layer (Python mantenido)            │
-│  aigatekeeper init | prompt | scan-prompt | push         │
-├─────────────────────────────────────────────────────────┤
-│                  FFI / Bindings Layer                    │
-│         Python → C API / Node.js N-API / Go cgo         │
-├─────────────────────────────────────────────────────────┤
-│                  Core Engine (C/C++)                     │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐   │
-│  │   Scanner   │ │   Sanitizer │ │  AST Optimizer  │   │
-│  │   (regex)   │ │  (patterns) │ │ (tree-sitter)   │   │
-│  └─────────────┘ └─────────────┘ └─────────────────┘   │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │     Prompt Injection Engine (nuevo en v2)      │    │
-│  │  • Heuristic patterns  • Semantic analysis      │    │
-│  │  • ML inference opcional • Obfuscation resistant│    │
-│  └─────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────┤
-│                  Distribución                            │
-│  • Binario standalone (no Python requerido)              │
-│  • ~5-10MB comprimido                                    │
-│  • Windows / Linux / macOS / ARM                         │
-└─────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│                    CLI Layer (Python)                          │
+│   aigatekeeper init | prompt | scan-prompt | push              │
+├───────────────────────────────────────────────────────────────┤
+│                    MCP Server + Web Dashboard                  │
+├───────────────────────────────────────────────────────────────┤
+│                    Wrapper Layer (fallback automático)         │
+│   src/detector/__init__.py  │  src/sanitizer/__init__.py       │
+├───────────────────────────────────────────────────────────────┤
+│                    Native Core (C++17 + pybind11)              │
+│  ┌────────────────┐ ┌────────────────┐ ┌──────────────────┐   │
+│  │   LegacyShield │ │ MetadataSanit  │ │ PromptInjectDet  │   │
+│  │   (re2, 55+)   │ │ (re2, 12 pat) │ │ (re2, 14 pat)   │   │
+│  └────────────────┘ └────────────────┘ └──────────────────┘   │
+├───────────────────────────────────────────────────────────────┤
+│                    Pure Python Fallback                        │
+│  ≡ misma API, sin dependencias nativas                        │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-**Mantendremos compatibilidad total**:
-- CLI Python existente funcionará igual
+**Compatibilidad total**:
+- CLI Python funciona igual con o sin módulo nativo
 - MCP Server sin cambios
 - APIs públicas preservadas
-- Solo el motor interno cambia
+- Fallback automático y transparente
 
 ---
 
@@ -380,8 +399,9 @@ Arquitectura planeada:
 2. Crea branch: `git checkout -b feature/tu-feature`
 3. Implementa cambios
 4. Agrega tests: `pytest tests/`
-5. Commit y push
-6. Crea Pull Request
+5. Para C++: `cd core && ./build.sh test`
+6. Commit y push
+7. Crea Pull Request
 
 Ver también: [CONTRIBUTING.md](CONTRIBUTING.md) (si existe)
 
@@ -397,7 +417,7 @@ MIT License - ver [LICENSE](LICENSE) para más detalles.
 
 - [MoureDev](https://moure.dev) - Inspiración de aprendizaje continuo
 - [Gentleman Programming](https://gentlemanprogramming.com) - Filosofía de calidad
-- [Comunidad Discord](https://discord.com/invite/gentleman-programming-769863833996754944) - Apoyo constante
+- [Comunidad Discord](https://discord.com/join) - Apoyo constante
 
 ---
 
