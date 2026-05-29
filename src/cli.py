@@ -66,7 +66,7 @@ def safe_echo(text: str):
 
 
 @click.group()
-@click.version_option(version="0.1.0")
+@click.version_option(version="2.0.0")
 def cli():
     """AG-Wrapper - Security & Context Optimization for AI Agents"""
     pass
