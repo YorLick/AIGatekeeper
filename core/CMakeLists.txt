@@ -2,6 +2,11 @@ cmake_minimum_required(VERSION 3.20)
 project(aigatekeeper-core VERSION 2.0.0 LANGUAGES CXX)
 
 # ============================================================================
+# Custom CMake modules (Findre2.cmake for cross-distro re2 support)
+# ============================================================================
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+# ============================================================================
 # Configuración del compilador
 # ============================================================================
 set(CMAKE_CXX_STANDARD 17)

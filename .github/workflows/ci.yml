@@ -30,6 +30,7 @@ jobs:
             cmake \
             libre2-dev \
             pybind11-dev \
+            pkg-config \
             build-essential
 
       - name: Install Python dependencies
@@ -75,6 +76,7 @@ jobs:
             cmake \
             libre2-dev \
             pybind11-dev \
+            pkg-config \
             build-essential
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
