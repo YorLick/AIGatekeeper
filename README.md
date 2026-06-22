@@ -407,6 +407,39 @@ Ver también: [CONTRIBUTING.md](CONTRIBUTING.md) (si existe)
 
 ---
 
+## 🛠️ Automatización de MCPs
+
+AIGatekeeper ahora incluye una utilidad para generar servidores MCP de forma estandarizada.
+
+### Crear un nuevo MCP
+Para generar un nuevo servidor MCP en `src/mcps/`, ejecuta:
+
+```bash
+python automate_mcp.py --name "NombreServidor" --tool "nombre_herramienta" --desc "Descripción detallada"
+```
+
+Esto utilizará las plantillas ubicadas en `templates/` para asegurar que el nuevo MCP siga los estándares de seguridad y estructura del proyecto.
+
+---
+
+## 📋 Roadmap
+
+| Versión | Feature |
+|---------|---------|
+| v1.0.0 | Initial release |
+| v1.0.1 | **Multi-language (Go, Rust, Java, C/C++) + Multi-OS scripts + MCP Server** |
+| v1.0.2 | **MCP Server stabilization & test automation (Indestructible Server)** |
+
+---
+
+## 💡 Inspiración
+
+> **"A programar se aprende programando."** — *MoureDev*
+>
+> **"La inteligencia artificial no tiene límites."** — *Gentleman Programming*
+
+---
+
 ## 📄 Licencia
 
 MIT License - ver [LICENSE](LICENSE) para más detalles.
